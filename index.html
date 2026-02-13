@@ -233,18 +233,30 @@ function connectSheets(){
 }
 
 function autoFetch(){
-  try{var url=localStorage.getItem('hwp_sheets_url');if(!url)return;
-  fetch(url).then(function(r){return r.text()}).then(function(csv){
-    var rows=parseCSV(csv);if(rows.length<1)return;
-    var csvData=rows.map(mapSheetRow).filter(function(d){return d.ref&&d.auth});
-    var refMap={};csvData.forEach(function(d){refMap[d.ref]=d});
-    DATA=DATA.map(function(d){return refMap[d.ref]||d});
-    var existing={};DATA.forEach(function(d){existing[d.ref]=true});
-    csvData.forEach(function(d){if(!existing[d.ref])DATA.push(d)});
-    rAll();rCal(NOW.getFullYear(),NOW.getMonth());rMap();
-    document.getElementById('currentDate').textContent=NOW.toLocaleDateString('en-IE',{weekday:'long',day:'numeric',month:'long',year:'numeric'})+' \u2022 Live';
-  }).catch(function(){})}catch(e){}
+  try{
+    var gasUrl=localStorage.getItem('hwp_gas_url');
+    if(gasUrl){
+      fetch(gasUrl,{method:'POST',body:JSON.stringify({action:'list'}),headers:{'Content-Type':'text/plain'}})
+      .then(function(r){return r.json()}).then(function(resp){
+        if(!resp.success||!resp.data)return;
+        var gasData=resp.data.map(function(d){return{auth:d.auth,client:d.client,project:d.project,ref:d.ref,proposal:d.proposal,summary:d.summary,location:d.location,regDate:pd(d.regDate),subDue:pd(d.subDue),decDue:pd(d.decDue),decDate:pd(d.decDate),grantDate:pd(d.grantDate),status:d.status||'New Application',portalUrl:d.portalUrl}}).filter(function(d){return d.ref&&d.auth});
+        var refMap={};gasData.forEach(function(d){refMap[d.ref]=d});
+        DATA=DATA.map(function(d){return refMap[d.ref]||d});
+        var existing={};DATA.forEach(function(d){existing[d.ref]=true});
+        gasData.forEach(function(d){if(!existing[d.ref])DATA.push(d)});
+        rAll();rCal(NOW.getFullYear(),NOW.getMonth());rMap();
+      }).catch(function(){});
+      return;
+    }
+    var url=localStorage.getItem('hwp_sheets_url');if(!url)return;
+    fetch(url).then(function(r){return r.text()}).then(function(csv){
+      var rows=parseCSV(csv);if(rows.length<1)return;
+      DATA=rows.map(mapSheetRow).filter(function(d){return d.ref&&d.auth});
+      rAll();rCal(NOW.getFullYear(),NOW.getMonth());rMap();
+    }).catch(function(){});
+  }catch(e){}
 }
+function pd(v){if(!v)return null;if(v instanceof Date)return v;if(typeof v==='string'){var p=v.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);if(p)return new Date(parseInt(p[3]),parseInt(p[2])-1,parseInt(p[1]));var iso=v.match(/(\d{4})-(\d{2})-(\d{2})/);if(iso)return new Date(parseInt(iso[1]),parseInt(iso[2])-1,parseInt(iso[3]));}return null;}
 
 function openSettings(){document.getElementById('settingsOverlay').style.display='flex';try{var u=localStorage.getItem('hwp_sheets_url');if(u)document.getElementById('sheetsUrl').value=u}catch(e){}loadGasUrl();}
 function closeSettings(){document.getElementById('settingsOverlay').style.display='none'}
