@@ -236,7 +236,11 @@ function autoFetch(){
   try{var url=localStorage.getItem('hwp_sheets_url');if(!url)return;
   fetch(url).then(function(r){return r.text()}).then(function(csv){
     var rows=parseCSV(csv);if(rows.length<1)return;
-    DATA=rows.map(mapSheetRow).filter(function(d){return d.ref&&d.auth});
+    var csvData=rows.map(mapSheetRow).filter(function(d){return d.ref&&d.auth});
+    var refMap={};csvData.forEach(function(d){refMap[d.ref]=d});
+    DATA=DATA.map(function(d){return refMap[d.ref]||d});
+    var existing={};DATA.forEach(function(d){existing[d.ref]=true});
+    csvData.forEach(function(d){if(!existing[d.ref])DATA.push(d)});
     rAll();rCal(NOW.getFullYear(),NOW.getMonth());rMap();
     document.getElementById('currentDate').textContent=NOW.toLocaleDateString('en-IE',{weekday:'long',day:'numeric',month:'long',year:'numeric'})+' \u2022 Live';
   }).catch(function(){})}catch(e){}
