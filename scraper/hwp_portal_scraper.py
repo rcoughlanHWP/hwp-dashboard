@@ -4,10 +4,10 @@ HWP Planning Portal Scraper
 ============================
 Scrapes Irish planning authority portals for application status updates.
 Supports two portal types:
-  1. Agile Applications Citizen Portal (Cork County, Cork City) — AngularJS SPA
+  1. Agile Applications Citizen Portal (Cork County, Cork City) -- AngularJS SPA
      Uses Playwright headless browser to render the SPA and extract data
      from Angular scope objects.
-  2. ePlanning.ie (Limerick) — Server-rendered HTML
+  2. ePlanning.ie (Limerick) -- Server-rendered HTML
      Uses requests + BeautifulSoup for fast, lightweight scraping.
 
 Each authority can have a primary and fallback portal URL to handle
@@ -32,7 +32,7 @@ import argparse
 import time
 from datetime import datetime
 
-# Optional imports — graceful fallback if not installed
+# Optional imports -- graceful fallback if not installed
 try:
     import requests
     HAS_REQUESTS = True
@@ -168,7 +168,7 @@ def parse_date(date_str):
 # AGILE APPLICATIONS SCRAPER (Cork County, Cork City)
 # =============================================================================
 # The Agile Citizen Portal is an AngularJS single-page application.
-# Data is NOT in the server HTML — it's rendered client-side by Angular.
+# Data is NOT in the server HTML -- it's rendered client-side by Angular.
 # We use Playwright to load the page, wait for Angular, then extract
 # data directly from the Angular scope objects via JavaScript evaluation.
 #
@@ -222,7 +222,7 @@ class AgilePortalScraper:
                     const scope = angular.element(row).scope();
                     const rowVar = scope.row || scope.$parent?.row;
                     if (!rowVar) return null;
-                    // Return a clean copy (no Angular $$hashKey etc.)
+                    # Return a clean copy (no Angular $$hashKey etc.)
                     return JSON.parse(JSON.stringify(rowVar));
                 } catch(e) {
                     return {error: e.message};
@@ -294,7 +294,7 @@ class AgilePortalScraper:
                         data[labelText] = input.value;
                     }
                 });
-                // Also check for non-input display elements (used for Decision, Status description)
+                # Also check for non-input display elements (used for Decision, Status description)
                 const genericLabels = document.querySelectorAll('label');
                 genericLabels.forEach(label => {
                     const labelText = label.textContent.trim();
@@ -371,7 +371,7 @@ class EPlanningPortalScraper:
     def scrape_application(self, ref):
         """Scrape an application by reference from ePlanning.ie."""
         # ePlanning URL format: /LimerickCCC/AppFileRefDetails/{ref}/0
-        # ref may contain slashes (e.g. 25/1234) — strip them for the URL
+        # ref may contain slashes (e.g. 25/1234) -- strip them for the URL
         clean_ref = ref.replace("/", "")
         url = f"{self.base_url}{self.detail_path}/{clean_ref}/0"
 
