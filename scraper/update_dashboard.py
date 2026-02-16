@@ -211,7 +211,8 @@ def main():
         html, updated = find_and_update_entry(html, ref, changes)
 
         if updated:
-            commit_lines.append(f"  - {ref} ({project}): {', '.join(f'{k}: {v.get(\"new\")}' for k, v in changes.items())}")
+            change_summary = ', '.join(f'{k}: {v.get("new")}' for k, v in changes.items())
+            commit_lines.append(f"  - {ref} ({project}): {change_summary}")
 
             # Special handling for FI status
             status_change = changes.get("status", {})
