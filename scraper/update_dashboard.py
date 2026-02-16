@@ -43,18 +43,40 @@ def run_scraper():
         print(f"Scraper stderr:\n{result.stderr}", file=sys.stderr)
         # Don't fail -- partial results may still be useful
 
-    # Extract JSON from stdout (scraper prints progress to stderr)
+    # Extract JSON from stdout
+    # The scraper may print progress messages to stdout before the JSON,
+    # so we need to find and extract the JSON array from the output
     stdout = result.stdout.strip()
     if not stdout:
         print("No output from scraper.")
         return []
 
+    # Try direct parse first
     try:
         return json.loads(stdout)
-    except json.JSONDecodeError as e:
-        print(f"Failed to parse scraper output: {e}", file=sys.stderr)
-        print(f"Raw output: {stdout[:500]}", file=sys.stderr)
-        return []
+    except json.JSONDecodeError:
+        pass
+
+    # Look for JSON array in the output (starts with '[')
+    json_start = stdout.rfind('[')
+    if json_start >= 0:
+        try:
+            return json.loads(stdout[json_start:])
+        except json.JSONDecodeError:
+            pass
+
+    # Look for JSON object (starts with '{')
+    json_start = stdout.find('{')
+    if json_start >= 0:
+        try:
+            data = json.loads(stdout[json_start:])
+            return [data] if isinstance(data, dict) else data
+        except json.JSONDecodeError:
+            pass
+
+    print(f"Failed to parse scraper output.", file=sys.stderr)
+    print(f"Raw output: {stdout[:500]}", file=sys.stderr)
+    return []
 
 
 def find_and_update_entry(html, ref, changes):
