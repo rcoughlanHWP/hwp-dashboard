@@ -1,0 +1,80 @@
+name: Portal Status Scraper
+
+# Runs every 4 hours during business hours (Mon-Fri, 7am-7pm Irish time / UTC+0)
+# Also runs on manual trigger
+on:
+  schedule:
+    - cron: '0 7,11,15,19 * * 1-5'   # 07:00, 11:00, 15:00, 19:00 UTC Mon-Fri
+  workflow_dispatch:                    # Manual trigger from GitHub UI
+
+permissions:
+  contents: write
+
+jobs:
+  scrape-and-update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install playwright beautifulsoup4 requests
+          playwright install chromium
+          playwright install-deps
+
+      - name: Run portal scraper
+        run: python scraper/update_dashboard.py
+        env:
+          PYTHONUNBUFFERED: '1'
+
+      - name: Check for changes
+        id: check_changes
+        run: |
+          if [ -f .scraper_changes.json ]; then
+            CHANGES=$(python -c "import json; d=json.load(open('.scraper_changes.json')); print(len(d.get('changes',[])))")
+            echo "changes=$CHANGES" >> $GITHUB_OUTPUT
+            if [ "$CHANGES" -gt "0" ]; then
+              echo "has_changes=true" >> $GITHUB_OUTPUT
+              # Extract commit message
+              python -c "import json; d=json.load(open('.scraper_changes.json')); print(d.get('commit_message','Auto-update'))" > .commit_msg.txt
+            else
+              echo "has_changes=false" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Commit and push changes
+        if: steps.check_changes.outputs.has_changes == 'true'
+        run: |
+          git config user.name "HWP Portal Scraper"
+          git config user.email "scraper@hwplanning.ie"
+          git add index.html
+          git commit -F .commit_msg.txt
+          git push
+          # Clean up temp files
+          git rm -f .scraper_changes.json .commit_msg.txt 2>/dev/null || true
+          git commit -m "Clean up scraper temp files" 2>/dev/null || true
+          git push 2>/dev/null || true
+
+      - name: Summary
+        run: |
+          echo "## Portal Scraper Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ steps.check_changes.outputs.has_changes }}" == "true" ]; then
+            echo "**${{ steps.check_changes.outputs.changes }} status change(s) detected and applied.**" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Changes committed to index.html and deployed via GitHub Pages." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "No status changes detected. Dashboard is up to date." >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Run completed at $(date -u '+%Y-%m-%d %H:%M UTC')" >> $GITHUB_STEP_SUMMARY
