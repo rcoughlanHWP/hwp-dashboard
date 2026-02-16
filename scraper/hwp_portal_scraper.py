@@ -202,8 +202,8 @@ class AgilePortalScraper:
         criteria = json.dumps({"openApplications": False, "reference": ref})
         search_url = f"{self.base_url}/search-applications/results?criteria={criteria}&page=1"
 
-        print(f"  Loading Agile portal: {self.base_url}")
-        print(f"  Searching for {ref}...")
+        print(f"  Loading Agile portal: {self.base_url}", file=sys.stderr)
+        print(f"  Searching for {ref}...", file=sys.stderr)
 
         try:
             self.page.goto(search_url, wait_until="networkidle", timeout=30000)
@@ -233,12 +233,12 @@ class AgilePortalScraper:
             return None
 
         if not row_data or "error" in row_data:
-            print(f"  [INFO] No results found for {ref}")
+            print(f"  [INFO] No results found for {ref}", file=sys.stderr)
             return None
 
         # Verify the reference matches
         if row_data.get("reference") != ref:
-            print(f"  [WARNING] Reference mismatch: expected {ref}, got {row_data.get('reference')}")
+            print(f"  [WARNING] Reference mismatch: expected {ref}, got {row_data.get('reference')}", file=sys.stderr)
             return None
 
         # Map Agile API fields to our standard format
@@ -269,7 +269,7 @@ class AgilePortalScraper:
     def _fetch_detail(self, app_id):
         """Fetch the detail page for additional fields not in search results."""
         detail_url = f"{self.base_url}/application-details/{app_id}"
-        print(f"  Fetching detail page (ID: {app_id})...")
+        print(f"  Fetching detail page (ID: {app_id})...", file=sys.stderr)
 
         try:
             self.page.goto(detail_url, wait_until="networkidle", timeout=30000)
@@ -375,7 +375,7 @@ class EPlanningPortalScraper:
         clean_ref = ref.replace("/", "")
         url = f"{self.base_url}{self.detail_path}/{clean_ref}/0"
 
-        print(f"  Fetching ePlanning page: {url}")
+        print(f"  Fetching ePlanning page: {url}", file=sys.stderr)
 
         try:
             resp = self.session.get(url, timeout=30)
@@ -471,7 +471,7 @@ class HWPPortalScraper:
             print("  [ERROR] Playwright not installed. Run: pip install playwright && playwright install chromium", file=sys.stderr)
             return False
         if self._browser is None:
-            print("  Starting headless browser...")
+            print("  Starting headless browser...", file=sys.stderr)
             self._playwright = sync_playwright().start()
             self._browser = self._playwright.chromium.launch(headless=True)
         return True
@@ -518,7 +518,7 @@ class HWPPortalScraper:
         # Try fallback portal
         fallback = entry.get("fallback")
         if fallback:
-            print(f"  Primary portal failed, trying fallback...")
+            print(f"  Primary portal failed, trying fallback...", file=sys.stderr)
             scraper = self._get_scraper(fallback)
             if scraper:
                 result = scraper.scrape_application(ref)
@@ -546,7 +546,7 @@ class HWPPortalScraper:
             ref = app.get("ref", "")
             current_status = app.get("status", "")
 
-            print(f"\nChecking {ref} ({auth})...")
+            print(f"\nChecking {ref} ({auth})...", file=sys.stderr)
 
             portal_data = self.check_application(auth, ref)
 
@@ -587,34 +587,34 @@ class HWPPortalScraper:
 
     def print_report(self, results):
         """Print a human-readable report of scrape results."""
-        print("\n" + "=" * 70)
-        print("HWP PLANNING PORTAL SCRAPE REPORT")
-        print(f"Date: {datetime.now().strftime('%d %B %Y %H:%M')}")
-        print("=" * 70)
+        print("\n" + "=" * 70, file=sys.stderr)
+        print("HWP PLANNING PORTAL SCRAPE REPORT", file=sys.stderr)
+        print(f"Date: {datetime.now().strftime('%d %B %Y %H:%M')}", file=sys.stderr)
+        print("=" * 70, file=sys.stderr)
 
         changed = [r for r in results if r.get("_has_changes")]
         failed = [r for r in results if r.get("_scrape_status") == "failed"]
         unchanged = [r for r in results if r.get("_scrape_status") == "success" and not r.get("_has_changes")]
 
         if changed:
-            print(f"\n--- STATUS CHANGES DETECTED ({len(changed)}) ---")
+            print(f"\n--- STATUS CHANGES DETECTED ({len(changed)}) ---", file=sys.stderr)
             for r in changed:
-                print(f"\n  {r['ref']} - {r.get('project', r.get('proposal', 'Unknown'))}")
-                print(f"  Authority: {r['auth']}")
+                print(f"\n  {r['ref']} - {r.get('project', r.get('proposal', 'Unknown'))}", file=sys.stderr)
+                print(f"  Authority: {r['auth']}", file=sys.stderr)
                 for field, change in r["_changes"].items():
-                    print(f"  {field}: {change['old']} -> {change['new']}")
+                    print(f"  {field}: {change['old']} -> {change['new']}", file=sys.stderr)
 
         if unchanged:
-            print(f"\n--- NO CHANGES ({len(unchanged)}) ---")
+            print(f"\n--- NO CHANGES ({len(unchanged)}) ---", file=sys.stderr)
             for r in unchanged:
-                print(f"  {r['ref']} - {r.get('status', 'Unknown')} (unchanged)")
+                print(f"  {r['ref']} - {r.get('status', 'Unknown')} (unchanged)", file=sys.stderr)
 
         if failed:
-            print(f"\n--- FAILED TO CHECK ({len(failed)}) ---")
+            print(f"\n--- FAILED TO CHECK ({len(failed)}) ---", file=sys.stderr)
             for r in failed:
-                print(f"  {r['ref']} - {r.get('_error', 'Unknown error')}")
+                print(f"  {r['ref']} - {r.get('_error', 'Unknown error')}", file=sys.stderr)
 
-        print("\n" + "=" * 70)
+        print("\n" + "=" * 70, file=sys.stderr)
         return changed
 
     def close(self):
@@ -679,11 +679,11 @@ def main():
 
     # Check dependencies
     if not HAS_PLAYWRIGHT:
-        print("WARNING: Playwright not installed. Agile portal scraping (Cork) will be skipped.")
-        print("  Install: pip install playwright && playwright install chromium\n")
+        print("WARNING: Playwright not installed. Agile portal scraping (Cork) will be skipped.", file=sys.stderr)
+        print("  Install: pip install playwright && playwright install chromium\n", file=sys.stderr)
     if not HAS_REQUESTS or not HAS_BS4:
-        print("WARNING: requests/beautifulsoup4 not installed. ePlanning scraping (Limerick) will be skipped.")
-        print("  Install: pip install requests beautifulsoup4\n")
+        print("WARNING: requests/beautifulsoup4 not installed. ePlanning scraping (Limerick) will be skipped.", file=sys.stderr)
+        print("  Install: pip install requests beautifulsoup4\n", file=sys.stderr)
 
     # Filter applications
     apps = DEFAULT_APPLICATIONS
@@ -691,7 +691,7 @@ def main():
     if args.ref:
         apps = [a for a in apps if a["ref"] == args.ref]
         if not apps:
-            print(f"Application {args.ref} not found in tracked list.")
+            print(f"Application {args.ref} not found in tracked list.", file=sys.stderr)
             sys.exit(1)
 
     if args.auth:
@@ -723,9 +723,9 @@ def main():
         else:
             changed = scraper.print_report(results)
             if changed:
-                print(f"\n{len(changed)} application(s) have status changes.")
+                print(f"\n{len(changed)} application(s) have status changes.", file=sys.stderr)
             else:
-                print("\nNo status changes detected.")
+                print("\nNo status changes detected.", file=sys.stderr)
     finally:
         scraper.close()
 
