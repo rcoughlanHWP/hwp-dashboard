@@ -41,9 +41,9 @@ def run_scraper():
 
     if result.returncode != 0:
         print(f"Scraper stderr:\n{result.stderr}", file=sys.stderr)
-        // Don't fail — partial results may still be useful
+        # Don't fail -- partial results may still be useful
 
-    // Extract JSON from stdout (scraper prints progress to stderr)
+    # Extract JSON from stdout (scraper prints progress to stderr)
     stdout = result.stdout.strip()
     if not stdout:
         print("No output from scraper.")
@@ -66,11 +66,11 @@ def find_and_update_entry(html, ref, changes):
 
     We use regex to find the entry by ref, then replace specific field values.
     """
-    // Escape the ref for regex (handle slashes)
+    # Escape the ref for regex (handle slashes)
     escaped_ref = re.escape(ref)
 
-    // Find the line containing this ref
-    // Pattern: matches from { to the next }, capturing the full entry
+    # Find the line containing this ref
+    # Pattern: matches from { to the next }, capturing the full entry
     pattern = rf'(\{{[^}}]*ref:"{escaped_ref}"[^}}]*\}})'
     match = re.search(pattern, html)
 
@@ -88,17 +88,17 @@ def find_and_update_entry(html, ref, changes):
         if new_val is None:
             continue
 
-        // Handle different field types
+        # Handle different field types
         if isinstance(new_val, bool):
             val_str = "true" if new_val else "false"
         elif new_val is None or new_val == "":
             val_str = "null"
         else:
-            // String value — escape quotes
+            # String value -- escape quotes
             val_str = f'"{new_val}"'
 
-        // Replace the field value in the entry
-        // Pattern: field:"old_value" or field:null
+        # Replace the field value in the entry
+        # Pattern: field:"old_value" or field:null
         field_pattern = rf'{field}:(?:"[^"]*"|null|true|false)'
         field_match = re.search(field_pattern, new_entry)
 
@@ -128,11 +128,11 @@ def update_summary_for_fi(html, ref):
 
     entry = match.group(1)
 
-    // Check if summary already mentions FI
+    # Check if summary already mentions FI
     if "further information" in entry.lower() and "requested" in entry.lower():
         return html
 
-    // Find summary field
+    # Find summary field
     summary_match = re.search(r'summary:"([^"]*)"', entry)
     if summary_match:
         old_summary = summary_match.group(1)
@@ -155,7 +155,7 @@ def clear_decision_due_for_fi(html, ref):
         return html
 
     entry = match.group(1)
-    // Replace decDue with null
+    # Replace decDue with null
     new_entry = re.sub(r'decDue:"[^"]*"', 'decDue:null', entry)
     if new_entry != entry:
         html = html.replace(entry, new_entry)
@@ -187,17 +187,17 @@ def main():
 
     if not changed:
         print("No changes detected. Dashboard is up to date.")
-        // Write empty changes file for the workflow to check
+        # Write empty changes file for the workflow to check
         changes_path = os.path.join(repo_root, ".scraper_changes.json")
         with open(changes_path, "w") as f:
             json.dump({"changes": [], "timestamp": datetime.now().isoformat()}, f)
         sys.exit(0)
 
-    // Read index.html
+    # Read index.html
     with open(index_path, "r", encoding="utf-8") as f:
         html = f.read()
 
-    // Apply changes
+    # Apply changes
     commit_lines = []
     for r in changed:
         ref = r.get("ref", "")
@@ -213,19 +213,19 @@ def main():
         if updated:
             commit_lines.append(f"  - {ref} ({project}): {', '.join(f'{k}: {v.get(\"new\")}' for k, v in changes.items())}")
 
-            // Special handling for FI status
+            # Special handling for FI status
             status_change = changes.get("status", {})
             if status_change.get("new") == "Further Information Requested":
                 html = update_summary_for_fi(html, ref)
                 html = clear_decision_due_for_fi(html, ref)
 
     if commit_lines:
-        // Write updated index.html
+        # Write updated index.html
         with open(index_path, "w", encoding="utf-8") as f:
             f.write(html)
         print(f"\nUpdated index.html with {len(commit_lines)} change(s).")
 
-        // Write changes summary for commit message
+        # Write changes summary for commit message
         changes_path = os.path.join(repo_root, ".scraper_changes.json")
         summary = {
             "changes": commit_lines,
